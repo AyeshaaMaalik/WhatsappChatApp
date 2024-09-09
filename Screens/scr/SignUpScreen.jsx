@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import Feather from 'react-native-vector-icons/Feather';
+import auth from '@react-native-firebase/auth'; // Import Firebase Auth
 
 const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -18,8 +19,9 @@ const SignupScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     const emailRegex = /\S+@\S+\.\S+/; 
+
     if (name.length < 3) {
       Alert.alert('Invalid Name', 'Name should be at least 3 characters long.');
     } else if (!emailRegex.test(email)) {
@@ -29,8 +31,21 @@ const SignupScreen = ({ navigation }) => {
     } else if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Passwords do not match.');
     } else {
-      Alert.alert('Success', 'Account created successfully!');
-      navigation.navigate('LoginScreen');
+      try {
+        const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+        // Update the user's display name
+        await userCredential.user.updateProfile({ displayName: name });
+        Alert.alert('Success', 'Account created successfully!');
+        navigation.navigate('LoginScreen');
+      } catch (error) {
+        if (error.code === 'auth/email-already-in-use') {
+          Alert.alert('Email In Use', 'That email address is already in use!');
+        } else if (error.code === 'auth/invalid-email') {
+          Alert.alert('Invalid Email', 'That email address is invalid!');
+        } else {
+          Alert.alert('Signup Error', error.message);
+        }
+      }
     }
   };
 

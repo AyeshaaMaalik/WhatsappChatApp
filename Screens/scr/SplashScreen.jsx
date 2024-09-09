@@ -1,19 +1,17 @@
-// SplashScreen.tsx
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
-    // Simulate loading process or delay
     setTimeout(() => {
-      navigation.replace('Login'); // Navigate to LoginScreen after 2 seconds
-    }, 2000);
+      navigation.replace('Login'); 
+    }, 1000);
   }, [navigation]);
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/whatsapp.png')} // Replace with your logo
+        source={require('../assets/whatsapp.png')}
         style={styles.logo}
         resizeMode="contain"
       />
