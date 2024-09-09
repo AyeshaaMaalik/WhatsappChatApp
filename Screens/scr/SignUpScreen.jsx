@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import Feather from 'react-native-vector-icons/Feather';
-import auth from '@react-native-firebase/auth'; // Import Firebase Auth
+import auth from '@react-native-firebase/auth'; 
 
 const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -20,7 +20,7 @@ const SignupScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSignup = async () => {
-    const emailRegex = /\S+@\S+\.\S+/; 
+    const emailRegex = /\S+@\S+\.\S+/;
 
     if (name.length < 3) {
       Alert.alert('Invalid Name', 'Name should be at least 3 characters long.');
@@ -32,19 +32,19 @@ const SignupScreen = ({ navigation }) => {
       Alert.alert('Password Mismatch', 'Passwords do not match.');
     } else {
       try {
+        // Create a new user with email and password
         const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-        // Update the user's display name
-        await userCredential.user.updateProfile({ displayName: name });
-        Alert.alert('Success', 'Account created successfully!');
-        navigation.navigate('LoginScreen');
+        const user = userCredential.user;
+
+        // Send email verification
+        await user.sendEmailVerification();
+
+        Alert.alert('Success', 'Verification link sent to your email.');
+
+        navigation.navigate('Login');
+
       } catch (error) {
-        if (error.code === 'auth/email-already-in-use') {
-          Alert.alert('Email In Use', 'That email address is already in use!');
-        } else if (error.code === 'auth/invalid-email') {
-          Alert.alert('Invalid Email', 'That email address is invalid!');
-        } else {
-          Alert.alert('Signup Error', error.message);
-        }
+        Alert.alert('Error', 'Failed to sign up. Please try again.');
       }
     }
   };
@@ -58,13 +58,14 @@ const SignupScreen = ({ navigation }) => {
       />
 
       <Text style={styles.title}>Create an Account</Text>
-      <Text style={styles.subtitle}>Sign up with your details below.</Text>
+      <Text style={styles.subtitle}>Sign up with your email and password.</Text>
 
       <View style={styles.inputContainer}>
         <Fontisto name="person" size={20} color="#777" />
         <TextInput
           style={styles.input}
           placeholder="Full Name"
+          placeholderTextColor={"black"}
           value={name}
           onChangeText={setName}
         />
@@ -76,6 +77,7 @@ const SignupScreen = ({ navigation }) => {
           style={styles.input}
           placeholder="Email address"
           keyboardType="email-address"
+          placeholderTextColor={"black"}
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
@@ -87,6 +89,7 @@ const SignupScreen = ({ navigation }) => {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor={"black"}
           secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
@@ -102,6 +105,7 @@ const SignupScreen = ({ navigation }) => {
           style={styles.input}
           placeholder="Confirm Password"
           secureTextEntry={!showPassword}
+          placeholderTextColor={"black"}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
@@ -111,7 +115,7 @@ const SignupScreen = ({ navigation }) => {
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.loginText}>Already have an account? Log in</Text>
       </TouchableOpacity>
     </View>
@@ -158,6 +162,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     flex: 1,
+    color:'black',
   },
   button: {
     backgroundColor: '#25D366',

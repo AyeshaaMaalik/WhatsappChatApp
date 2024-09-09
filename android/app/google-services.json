@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "506251558708",
-    "project_id": "chatapp-26111",
-    "storage_bucket": "chatapp-26111.appspot.com"
+    "project_number": "214631106988",
+    "project_id": "whatsapp-4f505",
+    "storage_bucket": "whatsapp-4f505.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:506251558708:android:c219ff71569a90500d6f61",
+        "mobilesdk_app_id": "1:214631106988:android:e22977f8793b2eb54dd209",
         "android_client_info": {
           "package_name": "com.myapp"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBHwuFSh0WVZR3lz49aaR6QkZzzxRpEFJs"
+          "current_key": "AIzaSyDWF3f65-7cs8Pzrbv26-_oxCRadv7oXqc"
         }
       ],
       "services": {
