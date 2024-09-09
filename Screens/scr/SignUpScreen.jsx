@@ -32,11 +32,8 @@ const SignupScreen = ({ navigation }) => {
       Alert.alert('Password Mismatch', 'Passwords do not match.');
     } else {
       try {
-        // Create a new user with email and password
         const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-
-        // Send email verification
+        const user = userCredential.user
         await user.sendEmailVerification();
 
         Alert.alert('Success', 'Verification link sent to your email.');
