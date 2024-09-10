@@ -10,27 +10,47 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import { launchImageLibrary } from 'react-native-image-picker'; 
 
 const ShowProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('John Doe');
   const [phoneNumber, setPhoneNumber] = useState('+1 234 567 890');
   const [about, setAbout] = useState('Hey there! I am using WhatsApp.');
+  const [profileImage, setProfileImage] = useState('https://via.placeholder.com/100');
 
   const handleSave = () => {
     Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
     setIsEditing(false);
   };
 
+  const handleImagePicker = () => {
+    const options = {
+      mediaType: 'photo',
+      quality: 1,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else if (response.assets && response.assets.length > 0) {
+        const source = { uri: response.assets[0].uri };
+        setProfileImage(source.uri); 
+      }
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileContainer}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/100' }} // Placeholder image URL
+          source={{ uri: profileImage }} 
           style={styles.profileImage}
         />
-        <TouchableOpacity style={styles.editButton}>
-          <Icon name="edit" size={24} color="#fff" />
+        <TouchableOpacity style={styles.editImageButton} onPress={handleImagePicker}>
+          <Icon name="edit" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -77,41 +97,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 20,
+    paddingHorizontal: 20,
   },
   profileContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
     borderColor: '#25D366',
   },
-  editButton: {
+  editImageButton: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: 5,
+    right: 5,
     backgroundColor: '#25D366',
-    padding: 10,
-    borderRadius: 50,
+    padding: 8,
+    borderRadius: 30,
   },
   infoContainer: {
     marginTop: 20,
   },
   label: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
   },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
-    padding: 10,
+    paddingVertical: 10,
     fontSize: 16,
     marginBottom: 20,
+    color:'gray',
   },
   saveButton: {
     backgroundColor: '#25D366',
@@ -119,11 +141,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
     alignItems: 'center',
+    marginTop: 20,
   },
   saveButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  editButton: {
+    borderColor: '#25D366',
+    borderWidth: 1,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
   },
   editButtonText: {
     color: '#25D366',

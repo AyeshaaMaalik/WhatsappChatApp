@@ -18,7 +18,6 @@ const Main = () => {
 
   return (
     <View style={styles.container}>
-
       <FlatList
         data={CHAT_DATA}
         renderItem={renderChatItem}
@@ -38,52 +37,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  header: {
-    height: 60,
-    backgroundColor: '#075E54',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 10,
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  icon: {
-    marginLeft: 20,
-  },
   chatsList: {
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 15,
   },
   chatItem: {
-    padding: 15,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
   chatName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#000',
   },
   lastMessage: {
-    fontSize: 16,
-    color: '#888',
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
   },
   fab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
+    bottom: 30,
+    right: 30,
     backgroundColor: '#25D366',
-    borderRadius: 30,
-    padding: 15,
-    elevation: 5,
+    borderRadius: 50,
+    width: 60,
+    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 8,
   },
 });
 

@@ -3,133 +3,150 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Alert,
-  ScrollView,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation } from '@react-navigation/native';
 
-const ShowProfile = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('John Doe');
-  const [phoneNumber, setPhoneNumber] = useState('+1 234 567 890');
-  const [about, setAbout] = useState('Hey there! I am using WhatsApp.');
+const AddProfileScreen = () => {
+  const [name, setName] = useState('');
+  const [profilePic, setProfilePic] = useState(null);
+  const navigation = useNavigation();
 
-  const handleSave = () => {
-    Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
-    setIsEditing(false);
+  const selectImage = () => {
+    const options = {
+      mediaType: 'photo',
+      maxWidth: 300,
+      maxHeight: 300,
+      quality: 1,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorMessage) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else {
+        const source = { uri: response.assets[0].uri };
+        setProfilePic(source);
+      }
+    });
+  };
+
+  const saveProfile = () => {
+    if (name === '' || !profilePic) {
+      Alert.alert('Error', 'Please add a name and profile picture');
+      return;
+    }
+
+    console.log('Name:', name);
+    console.log('Profile Picture:', profilePic.uri);
+    Alert.alert('Profile Saved', 'Your profile has been created successfully');
+    
+    navigation.navigate('Main');
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.profileContainer}>
-        <Image
-          source={{ uri: 'https://via.placeholder.com/100' }} // Placeholder image URL
-          style={styles.profileImage}
-        />
-        <TouchableOpacity style={styles.editButton}>
-          <Icon name="edit" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <Text style={styles.title}>Add Profile</Text>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.label}>Name:</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          editable={isEditing}
-          onChangeText={setName}
-        />
-
-        <Text style={styles.label}>Phone Number:</Text>
-        <TextInput
-          style={styles.input}
-          value={phoneNumber}
-          editable={isEditing}
-          onChangeText={setPhoneNumber}
-        />
-
-        <Text style={styles.label}>About:</Text>
-        <TextInput
-          style={styles.input}
-          value={about}
-          editable={isEditing}
-          onChangeText={setAbout}
-        />
-
-        {isEditing ? (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
+      <TouchableOpacity onPress={selectImage} style={styles.imageContainer}>
+        {profilePic ? (
+          <Image source={profilePic} style={styles.image} />
         ) : (
-          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <Text style={styles.addPhotoText}>Add Photo</Text>
         )}
-      </View>
-    </ScrollView>
+      </TouchableOpacity>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter your name"
+        value={name}
+        placeholderTextColor="#999"
+        onChangeText={(text) => setName(text)}
+      />
+
+      <TouchableOpacity style={styles.button} onPress={saveProfile}>
+        <Text style={styles.buttonText}>Save Profile</Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  profileContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#EDEDED',
   },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#25D366',
-  },
-  editButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#25D366',
-    padding: 10,
-    borderRadius: 50,
-  },
-  infoContainer: {
-    marginTop: 20,
-  },
-  label: {
-    fontSize: 16,
+  title: {
+    fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 5,
+    color: '#075E54', 
+    marginBottom: 30,
+  },
+  imageContainer: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#D9D9D9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+    borderColor: '#25D366',
+    borderWidth: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  image: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+  },
+  addPhotoText: {
+    fontSize: 18,
+    color: '#888',
   },
   input: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    padding: 10,
-    fontSize: 16,
+    height: 50,
+    width: '100%',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    backgroundColor: '#fff',
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    color: '#333',
   },
-  saveButton: {
-    backgroundColor: '#25D366',
+  button: {
+    backgroundColor: '#25D366', 
     paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    alignItems: 'center',
+    paddingHorizontal: 80,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  saveButtonText: {
+  buttonText: {
     color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
-  },
-  editButtonText: {
-    color: '#25D366',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });
 
-export default ShowProfile;
+export default AddProfileScreen;
