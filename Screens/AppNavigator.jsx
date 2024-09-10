@@ -5,7 +5,6 @@ import SplashScreen from './scr/SplashScreen';
 import LoginScreen from './scr/LoginScreen';
 import SignupScreen from './scr/SignUpScreen';
 import AddProfile from './scr/AddProfile';
-import ChatsScreen from './scr/Msin';
 import Parent from './scr/Parent';
 
 const Stack = createNativeStackNavigator();
@@ -35,12 +34,6 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Profile"
           component={AddProfile}
-          options={{ headerShown: false }} 
-        />
-
-        <Stack.Screen
-          name="Main"
-          component={ChatsScreen}
           options={{ headerShown: false }} 
         />
 

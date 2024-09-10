@@ -7,13 +7,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import storage from '@react-native-firebase/storage';
+import database from '@react-native-firebase/database'; // Import Realtime Database
 import { useNavigation } from '@react-navigation/native';
 
 const AddProfileScreen = () => {
   const [name, setName] = useState('');
   const [profilePic, setProfilePic] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
   const selectImage = () => {
@@ -36,17 +40,51 @@ const AddProfileScreen = () => {
     });
   };
 
-  const saveProfile = () => {
+  const uploadImage = async () => {
+    if (!profilePic) return null;
+
+    const { uri } = profilePic;
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const uploadUri = Platform.OS === 'ios' ? uri.replace('file://', '') : uri;
+
+    const storageRef = storage().ref(`profiles/${filename}`);
+    const task = storageRef.putFile(uploadUri);
+
+    try {
+      await task;
+      const url = await storageRef.getDownloadURL();
+      return url;
+    } catch (e) {
+      console.error('Image upload error: ', e);
+      return null;
+    }
+  };
+
+  const saveProfile = async () => {
     if (name === '' || !profilePic) {
       Alert.alert('Error', 'Please add a name and profile picture');
       return;
     }
 
-    console.log('Name:', name);
-    console.log('Profile Picture:', profilePic.uri);
+    setIsLoading(true);
+
+    const imageUrl = await uploadImage();
+    if (!imageUrl) {
+      Alert.alert('Error', 'Failed to upload profile picture');
+      setIsLoading(false);
+      return;
+    }
+
+    const newProfileRef = database().ref('profiles').push();
+    await newProfileRef.set({
+      name: name,
+      profilePicUrl: imageUrl,
+    });
+
     Alert.alert('Profile Saved', 'Your profile has been created successfully');
-    
-    navigation.navigate('Main');
+    setIsLoading(false);
+
+    navigation.navigate('Parent');
   };
 
   return (
@@ -69,9 +107,13 @@ const AddProfileScreen = () => {
         onChangeText={(text) => setName(text)}
       />
 
-      <TouchableOpacity style={styles.button} onPress={saveProfile}>
-        <Text style={styles.buttonText}>Save Profile</Text>
-      </TouchableOpacity>
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#25D366" />
+      ) : (
+        <TouchableOpacity style={styles.button} onPress={saveProfile}>
+          <Text style={styles.buttonText}>Save Profile</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -87,7 +129,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#075E54', 
+    color: '#075E54',
     marginBottom: 30,
   },
   imageContainer: {
@@ -132,7 +174,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   button: {
-    backgroundColor: '#25D366', 
+    backgroundColor: '#25D366',
     paddingVertical: 15,
     paddingHorizontal: 80,
     borderRadius: 25,
