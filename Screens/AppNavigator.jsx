@@ -6,6 +6,7 @@ import LoginScreen from './scr/LoginScreen';
 import SignupScreen from './scr/SignUpScreen';
 import ChatScreen from './scr/ChatScreen';
 import AddProfile from './scr/AddProfile';
+import ChatsScreen from './scr/Msin';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,6 +43,13 @@ const AppNavigator = () => {
           component={AddProfile}
           options={{ headerShown: false }} 
         />
+
+        <Stack.Screen
+          name="Main"
+          component={ChatsScreen}
+          options={{ headerShown: false }} 
+        />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
