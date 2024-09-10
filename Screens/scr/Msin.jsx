@@ -37,7 +37,6 @@ const ChatsScreen = () => {
         contentContainerStyle={styles.chatsList}
       />
 
-      {/* Floating Action Button (FAB) */}
       <TouchableOpacity style={styles.fab}>
         <Feather name="message-circle" size={30} color="#fff" />
       </TouchableOpacity>

@@ -23,7 +23,7 @@ const LoginScreen = ({ navigation }) => {
     } else if (password.length < 6) {
       Alert.alert('Invalid password', 'Password must be at least 6 characters long');
     } else {
-      navigation.navigate('Main', { email });
+      navigation.navigate('Parent', { email });
     }
   };
 

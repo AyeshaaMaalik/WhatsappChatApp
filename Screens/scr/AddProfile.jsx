@@ -46,7 +46,7 @@ const AddProfileScreen = () => {
     console.log('Profile Picture:', profilePic.uri);
     Alert.alert('Profile Saved', 'Your profile has been created successfully');
     
-    navigation.navigate('Main');
+    navigation.navigate('Parent');
   };
 
   return (
