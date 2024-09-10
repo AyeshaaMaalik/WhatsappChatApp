@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,77 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { launchImageLibrary } from 'react-native-image-picker'; 
+import { launchImageLibrary } from 'react-native-image-picker';
+import storage from '@react-native-firebase/storage';
+import database from '@react-native-firebase/database'; 
 
 const ShowProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('John Doe');
-  const [phoneNumber, setPhoneNumber] = useState('+1 234 567 890');
-  const [about, setAbout] = useState('Hey there! I am using WhatsApp.');
-  const [profileImage, setProfileImage] = useState('https://via.placeholder.com/100');
+  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [about, setAbout] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
 
-  const handleSave = () => {
-    Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
+  useEffect(() => {
+    const profileRef = database().ref('profiles').limitToLast(1);
+    profileRef.once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const profile = Object.values(data)[0]; 
+        setName(profile.name || 'John Doe');
+        setPhoneNumber(profile.phoneNumber || '+1 234 567 890'); 
+        setAbout(profile.about || 'Hey there! I am using WhatsApp.');
+        setProfileImage(profile.profilePicUrl || null);
+      }
+    });
+  }, []);
+
+  const handleSave = async () => {
+    if (profileImage) {
+      // Upload the profile image to Firebase Storage
+      const uploadUri = profileImage;
+      const filename = uploadUri.substring(uploadUri.lastIndexOf('/') + 1);
+      const storageRef = storage().ref(`profile_pics/${filename}`);
+      
+      try {
+        await storageRef.putFile(uploadUri);
+        const downloadURL = await storageRef.getDownloadURL();
+
+        // Update the profile in Firebase Realtime Database
+        const profileRef = database().ref('profiles').limitToLast(1);
+        const snapshot = await profileRef.once('value');
+        const data = snapshot.val();
+        if (data) {
+          const profileId = Object.keys(data)[0];
+          await database().ref(`profiles/${profileId}`).update({
+            name,
+            phoneNumber,
+            about,
+            profilePicUrl: downloadURL,
+          });
+        }
+
+        Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
+      } catch (error) {
+        console.error('Error updating profile: ', error);
+        Alert.alert('Update Error', 'There was an error updating your profile.');
+      }
+    } else {
+      // Update the profile without changing the image
+      const profileRef = database().ref('profiles').limitToLast(1);
+      const snapshot = await profileRef.once('value');
+      const data = snapshot.val();
+      if (data) {
+        const profileId = Object.keys(data)[0];
+        await database().ref(`profiles/${profileId}`).update({
+          name,
+          phoneNumber,
+          about,
+        });
+
+        Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
+      }
+    }
     setIsEditing(false);
   };
 
@@ -36,8 +96,8 @@ const ShowProfile = () => {
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
       } else if (response.assets && response.assets.length > 0) {
-        const source = { uri: response.assets[0].uri };
-        setProfileImage(source.uri); 
+        const source = response.assets[0].uri;
+        setProfileImage(source);
       }
     });
   };
@@ -46,7 +106,7 @@ const ShowProfile = () => {
     <ScrollView style={styles.container}>
       <View style={styles.profileContainer}>
         <Image
-          source={{ uri: profileImage }} 
+          source={profileImage ? { uri: profileImage } : require('../assets/whatsapp.png')}
           style={styles.profileImage}
         />
         <TouchableOpacity style={styles.editImageButton} onPress={handleImagePicker}>
@@ -133,7 +193,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     marginBottom: 20,
-    color:'gray',
+    color: 'gray',
   },
   saveButton: {
     backgroundColor: '#25D366',
