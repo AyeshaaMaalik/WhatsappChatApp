@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,11 @@ import {
   StyleSheet,
   Image,
   Alert,
+  ActivityIndicator
 } from 'react-native';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import Feather from 'react-native-vector-icons/Feather';
-import auth from '@react-native-firebase/auth'; 
+import auth from '@react-native-firebase/auth';
 
 const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -18,31 +19,77 @@ const SignupScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
+  useEffect(() => {
+    let intervalId;
+
+    if (isVerifying) {
+      intervalId = setInterval(async () => {
+        const currentUser = auth().currentUser;
+        if (currentUser) {
+          await currentUser.reload(); // Refresh user data
+          console.log('Email Verified Status:', currentUser.emailVerified); // Debugging log
+          if (currentUser.emailVerified) {
+            clearInterval(intervalId);
+            Alert.alert('Email Verified', 'Your email has been successfully verified!');
+            navigation.navigate('Profile');
+          }
+        }
+      }, 3000); // Check every 3 seconds
+    }
+
+    // Cleanup the interval on component unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isVerifying, navigation]);
+
+  // Function to handle the signup
   const handleSignup = async () => {
     const emailRegex = /\S+@\S+\.\S+/;
 
-    if (name.length < 3) {
+    if (name.trim().length < 3) {
       Alert.alert('Invalid Name', 'Name should be at least 3 characters long.');
-    } else if (!emailRegex.test(email)) {
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
-    } else if (password.length < 6) {
+      return;
+    }
+
+    if (password.length < 6) {
       Alert.alert('Invalid Password', 'Password must be at least 6 characters long.');
-    } else if (password !== confirmPassword) {
+      return;
+    }
+
+    if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Passwords do not match.');
-    } else {
-      try {
-        const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user
-        await user.sendEmailVerification();
+      return;
+    }
 
-        Alert.alert('Success', 'Verification link sent to your email.');
+    try {
+      setIsLoading(true);
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
 
-        navigation.navigate('Login');
+      await user.updateProfile({
+        displayName: name,
+      });
 
-      } catch (error) {
-        Alert.alert('Error', 'Failed to sign up. Please try again.');
-      }
+      await user.sendEmailVerification();
+
+      Alert.alert('Success', 'Verification link sent to your email.');
+      setIsVerifying(true);
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Signup Error:', error); 
+      Alert.alert('Error', error.message || 'Failed to sign up. Please try again.');
     }
   };
 
@@ -54,67 +101,80 @@ const SignupScreen = ({ navigation }) => {
         resizeMode="contain"
       />
 
-      <Text style={styles.title}>Create an Account</Text>
-      <Text style={styles.subtitle}>Sign up with your email and password.</Text>
+      {isVerifying ? (
+        <>
+          <Text style={styles.verifyingText}>Waiting for email verification...</Text>
+          <ActivityIndicator size="large" color="#25D366" />
+        </>
+      ) : (
+        <>
+          <Text style={styles.title}>Create an Account</Text>
+          <Text style={styles.subtitle}>Sign up with your email and password.</Text>
 
-      <View style={styles.inputContainer}>
-        <Fontisto name="person" size={20} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor={"black"}
-          value={name}
-          onChangeText={setName}
-        />
-      </View>
+          <View style={styles.inputContainer}>
+            <Fontisto name="person" size={20} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              placeholderTextColor="black"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
-      <View style={styles.inputContainer}>
-        <Fontisto name="email" size={20} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="Email address"
-          keyboardType="email-address"
-          placeholderTextColor={"black"}
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
+          <View style={styles.inputContainer}>
+            <Fontisto name="email" size={20} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              keyboardType="email-address"
+              placeholderTextColor="black"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
 
-      <View style={styles.inputContainer}>
-        <Feather name="lock" size={20} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={"black"}
-          secureTextEntry={!showPassword}
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#777" />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.inputContainer}>
+            <Feather name="lock" size={20} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="black"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Feather name={showPassword ? 'eye' : 'eye-off'} size={20} color="#777" />
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.inputContainer}>
-        <Feather name="lock" size={20} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          secureTextEntry={!showPassword}
-          placeholderTextColor={"black"}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-      </View>
+          <View style={styles.inputContainer}>
+            <Feather name="lock" size={20} color="#777" />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              secureTextEntry={!showPassword}
+              placeholderTextColor="black"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+          </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSignup}>
-        <Text style={styles.buttonText}>Sign Up</Text>
-      </TouchableOpacity>
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#25D366" />
+          ) : (
+            <TouchableOpacity style={styles.button} onPress={handleSignup}>
+              <Text style={styles.buttonText}>Sign Up</Text>
+            </TouchableOpacity>
+          )}
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.loginText}>Already have an account? Log in</Text>
-      </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.loginText}>Already have an account? Log in</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 };
@@ -159,7 +219,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     flex: 1,
-    color:'black',
+    color: 'black',
   },
   button: {
     backgroundColor: '#25D366',
@@ -177,5 +237,10 @@ const styles = StyleSheet.create({
     color: '#075E54',
     fontSize: 16,
     textDecorationLine: 'underline',
+  },
+  verifyingText: {
+    fontSize: 18,
+    color: '#075E54',
+    marginBottom: 10,
   },
 });

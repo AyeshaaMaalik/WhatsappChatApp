@@ -4,8 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from './scr/SplashScreen';
 import LoginScreen from './scr/LoginScreen';
 import SignupScreen from './scr/SignUpScreen';
-import Otp from './scr/Otp';
 import ChatScreen from './scr/ChatScreen';
+import AddProfile from './scr/AddProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,14 +32,14 @@ const AppNavigator = () => {
         />
 
         <Stack.Screen
-          name="OTP"
-          component={Otp}
+          name="Chat"
+          component={ChatScreen}
           options={{ headerShown: false }} 
         />
 
         <Stack.Screen
-          name="Chat"
-          component={ChatScreen}
+          name="Profile"
+          component={AddProfile}
           options={{ headerShown: false }} 
         />
       </Stack.Navigator>
