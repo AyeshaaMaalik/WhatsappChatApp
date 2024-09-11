@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
@@ -16,10 +17,12 @@ import { useNavigation } from '@react-navigation/native';
 
 const AddProfileScreen = () => {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [profilePic, setProfilePic] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
+  // Function to select an image from the library
   const selectImage = () => {
     const options = {
       mediaType: 'photo',
@@ -40,6 +43,7 @@ const AddProfileScreen = () => {
     });
   };
 
+  // Function to upload the selected image to Firebase Storage
   const uploadImage = async () => {
     if (!profilePic) return null;
 
@@ -60,14 +64,16 @@ const AddProfileScreen = () => {
     }
   };
 
+  // Function to save the profile details to Firebase Realtime Database
   const saveProfile = async () => {
-    if (name === '' || !profilePic) {
-      Alert.alert('Error', 'Please add a name and profile picture');
+    if (name === '' || email === '' || !profilePic) {
+      Alert.alert('Error', 'Please add a name, email, and profile picture');
       return;
     }
 
     setIsLoading(true);
 
+    // Upload profile picture to Firebase Storage and get the URL
     const imageUrl = await uploadImage();
     if (!imageUrl) {
       Alert.alert('Error', 'Failed to upload profile picture');
@@ -75,15 +81,18 @@ const AddProfileScreen = () => {
       return;
     }
 
-    const newProfileRef = database().ref('profiles').push();
+    // Save profile details to Firebase Realtime Database
+    const newProfileRef = database().ref('profiles').push();  // Create a new profile with unique ID
     await newProfileRef.set({
       name: name,
+      email: email,
       profilePicUrl: imageUrl,
     });
 
     Alert.alert('Profile Saved', 'Your profile has been created successfully');
     setIsLoading(false);
 
+    // Navigate to the 'Parent' screen after saving the profile
     navigation.navigate('Parent');
   };
 
@@ -105,6 +114,14 @@ const AddProfileScreen = () => {
         value={name}
         placeholderTextColor="#999"
         onChangeText={(text) => setName(text)}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter your email"
+        value={email}
+        placeholderTextColor="#999"
+        onChangeText={(text) => setEmail(text)}
       />
 
       {isLoading ? (

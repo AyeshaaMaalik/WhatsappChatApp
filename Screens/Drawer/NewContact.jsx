@@ -1,98 +1,173 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import React, { useState } from 'react';
-import firestore from '@react-native-firebase/firestore';
+import {
+  View,
+  Text,
+  TextInput,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import database from '@react-native-firebase/database';
 import { useNavigation } from '@react-navigation/native';
 
-const NewContact = () => {
-  const [name, setName] = useState('');
+const ContactScreen = () => {
   const [email, setEmail] = useState('');
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation();
 
-  const saveContact = async () => {
-    if (name === '' || email === '') {
-      Alert.alert('Error', 'Please enter both name and email');
+  const fetchProfile = async () => {
+    if (email.trim() === '') {
+      Alert.alert('Error', 'Please enter an email address');
       return;
     }
 
-    const contactSnapshot = await firestore()
-      .collection('contacts')
-      .where('email', '==', email)
-      .get();
+    setIsLoading(true);
 
-    if (!contactSnapshot.empty) {
-      const contactData = contactSnapshot.docs[0].data();
+    try {
+      const snapshot = await database().ref('profiles').orderByChild('email').equalTo(email).once('value');
+
+      if (snapshot.exists()) {
+        const profileData = snapshot.val();
+        const profileKey = Object.keys(profileData)[0]; // Get the first profile key
+        const profileInfo = profileData[profileKey];
+
+        setProfile(profileInfo);
+      } else {
+        Alert.alert('Not Found', 'No profile found for this email address');
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('Error fetching profile: ', error);
+      Alert.alert('Error', 'Failed to fetch profile. Please try again.');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleAddContact = () => {
+    if (profile) {
       navigation.navigate('Contacts', {
-        name: contactData.name,
-        email: contactData.email,
-        profilePic: contactData.profilePic,
+        name: profile.name,
+        email: email,
+        profilePic: profile.profilePicUrl,
       });
-    } else {
-      await firestore()
-        .collection('contacts')
-        .add({ name, email, profilePic: '' });
-      Alert.alert('Success', 'Contact saved!');
-      navigation.navigate('Contacts');
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter name"
-        placeholderTextColor={"black"}
-        value={name}
-        onChangeText={(text) => setName(text)}
-      />
+      <Text style={styles.title}>Find Contact</Text>
 
-      <Text style={styles.label}>Email</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter email"
-        placeholderTextColor={"black"}
+        placeholder="Enter email address"
         value={email}
+        placeholderTextColor="#999"
         onChangeText={(text) => setEmail(text)}
-        keyboardType="email-address"
       />
 
-      <TouchableOpacity style={styles.saveButton} onPress={saveContact}>
-        <Text style={styles.saveButtonText}>Save</Text>
+      <TouchableOpacity style={styles.button} onPress={fetchProfile}>
+        <Text style={styles.buttonText}>Search</Text>
       </TouchableOpacity>
+
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#25D366" />
+      ) : (
+        profile && (
+          <View style={styles.profileContainer}>
+            <Image source={{ uri: profile.profilePicUrl }} style={styles.image} />
+            <Text style={styles.profileName}>{profile.name}</Text>
+            <Text style={styles.profileEmail}>{email}</Text>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
+              <Text style={styles.addButtonText}>Add Contact</Text>
+            </TouchableOpacity>
+          </View>
+        )
+      )}
     </View>
   );
 };
 
-export default NewContact;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#EDEDED',
   },
-  label: {
-    fontSize: 18,
-    marginBottom: 8,
-    color:'black',
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#075E54',
+    marginBottom: 30,
   },
   input: {
-    borderWidth: 1,
+    height: 50,
+    width: '100%',
     borderColor: '#ccc',
-    padding: 10,
+    borderWidth: 1,
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    backgroundColor: '#fff',
     marginBottom: 20,
-    borderRadius: 8,
-    color:'black',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    color: '#333',
   },
-  saveButton: {
-    backgroundColor: '#075E54',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
+  button: {
+    backgroundColor: '#25D366',
+    paddingVertical: 15,
+    paddingHorizontal: 80,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  saveButtonText: {
+  buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
+  profileContainer: {
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  image: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    marginBottom: 10,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  profileEmail: {
+    fontSize: 16,
+    color: '#555',
+  },
+  addButton: {
+    backgroundColor: '#075E54',
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
+
+export default ContactScreen;

@@ -29,18 +29,17 @@ const SignupScreen = ({ navigation }) => {
       intervalId = setInterval(async () => {
         const currentUser = auth().currentUser;
         if (currentUser) {
-          await currentUser.reload(); // Refresh user data
-          console.log('Email Verified Status:', currentUser.emailVerified); // Debugging log
+          await currentUser.reload(); 
+          console.log('Email Verified Status:', currentUser.emailVerified);
           if (currentUser.emailVerified) {
             clearInterval(intervalId);
             Alert.alert('Email Verified', 'Your email has been successfully verified!');
             navigation.navigate('Profile');
           }
         }
-      }, 3000); // Check every 3 seconds
+      }, 3000);
     }
 
-    // Cleanup the interval on component unmount
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -48,7 +47,6 @@ const SignupScreen = ({ navigation }) => {
     };
   }, [isVerifying, navigation]);
 
-  // Function to handle the signup
   const handleSignup = async () => {
     const emailRegex = /\S+@\S+\.\S+/;
 

@@ -12,7 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
-import database from '@react-native-firebase/database'; 
+import database from '@react-native-firebase/database';
 
 const ShowProfile = () => {
   const [isEditing, setIsEditing] = useState(false);

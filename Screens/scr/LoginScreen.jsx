@@ -10,27 +10,40 @@ import {
 } from 'react-native';
 import Fontisto from 'react-native-vector-icons/Fontisto';
 import Feather from 'react-native-vector-icons/Feather';
+import auth from '@react-native-firebase/auth';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleLogin = () => {
-    const emailRegex = /\S+@\S+\.\S+/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Invalid email', 'Please enter a valid email address');
-    } else if (password.length < 6) {
-      Alert.alert('Invalid password', 'Password must be at least 6 characters long');
-    } else {
-      navigation.navigate('Parent', { email });
-    }
-  };
+    const handleLogin = async () => {
+      const emailRegex = /\S+@\S+\.\S+/;
+      if (!emailRegex.test(email)) {
+        Alert.alert('Invalid email', 'Please enter a valid email address');
+      } else if (password.length < 6) {
+        Alert.alert('Invalid password', 'Password must be at least 6 characters long');
+      } else {
+        try {
+          await auth().signInWithEmailAndPassword(email, password);
+          // Pass the email to the Profile screen
+          navigation.navigate('Parent', { screen: 'ShowProfile', params: { email } });
+        } catch (error) {
+          if (error.code === 'auth/user-not-found') {
+            Alert.alert('User not found', 'No user found with this email address');
+          } else if (error.code === 'auth/wrong-password') {
+            Alert.alert('Incorrect password', 'The password you entered is incorrect');
+          } else {
+            Alert.alert('Login Error', 'An error occurred during login. Please try again.');
+          }
+        }
+      }
+    };
+    
 
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/whatsapp.png')} 
+        source={require('../assets/whatsapp.png')}
         style={styles.logo}
         resizeMode="contain"
       />
