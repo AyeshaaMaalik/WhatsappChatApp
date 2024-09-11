@@ -1,31 +1,16 @@
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
-const CHAT_DATA = [
-  { id: '1', name: 'John Doe', lastMessage: 'Hey, how are you?' },
-  { id: '2', name: 'Jane Smith', lastMessage: 'Can we meet tomorrow?' },
-  { id: '3', name: 'Bob Johnson', lastMessage: 'Reminder about the meeting' },
-];
 
 const Main = () => {
-  const renderChatItem = ({ item }) => (
-    <View style={styles.chatItem}>
-      <Text style={styles.chatName}>{item.name}</Text>
-      <Text style={styles.lastMessage}>{item.lastMessage}</Text>
-    </View>
-  );
+  const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={CHAT_DATA}
-        renderItem={renderChatItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.chatsList}
-      />
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={()=> navigation.navigate('Contacts')}>
         <Feather name="message-circle" size={30} color="#fff" />
       </TouchableOpacity>
     </View>

@@ -6,6 +6,8 @@ import LoginScreen from './scr/LoginScreen';
 import SignupScreen from './scr/SignUpScreen';
 import AddProfile from './scr/AddProfile';
 import Parent from './scr/Parent';
+import Contacts from './Drawer/Contacts';
+import NewContact from './Drawer/NewContact';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +42,18 @@ const AppNavigator = () => {
         <Stack.Screen
           name="Parent"
           component={Parent}
+          options={{ headerShown: false }} 
+        />
+
+        <Stack.Screen
+          name="Contacts"
+          component={Contacts}
+          options={{ headerShown: false }} 
+        />
+
+        <Stack.Screen
+          name="New Contact"
+          component={NewContact}
           options={{ headerShown: false }} 
         />
 

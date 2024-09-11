@@ -37,7 +37,6 @@ const ShowProfile = () => {
 
   const handleSave = async () => {
     if (profileImage) {
-      // Upload the profile image to Firebase Storage
       const uploadUri = profileImage;
       const filename = uploadUri.substring(uploadUri.lastIndexOf('/') + 1);
       const storageRef = storage().ref(`profile_pics/${filename}`);
@@ -46,7 +45,6 @@ const ShowProfile = () => {
         await storageRef.putFile(uploadUri);
         const downloadURL = await storageRef.getDownloadURL();
 
-        // Update the profile in Firebase Realtime Database
         const profileRef = database().ref('profiles').limitToLast(1);
         const snapshot = await profileRef.once('value');
         const data = snapshot.val();
@@ -66,7 +64,6 @@ const ShowProfile = () => {
         Alert.alert('Update Error', 'There was an error updating your profile.');
       }
     } else {
-      // Update the profile without changing the image
       const profileRef = database().ref('profiles').limitToLast(1);
       const snapshot = await profileRef.once('value');
       const data = snapshot.val();
