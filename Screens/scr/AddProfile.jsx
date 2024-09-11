@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
-import database from '@react-native-firebase/database'; // Import Realtime Database
+import database from '@react-native-firebase/database'; 
 import { useNavigation } from '@react-navigation/native';
 
 const AddProfileScreen = () => {
