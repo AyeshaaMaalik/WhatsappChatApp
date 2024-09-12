@@ -31,7 +31,7 @@ const ContactScreen = () => {
 
       if (snapshot.exists()) {
         const profileData = snapshot.val();
-        const profileKey = Object.keys(profileData)[0]; // Get the first profile key
+        const profileKey = Object.keys(profileData)[0]; 
         const profileInfo = profileData[profileKey];
 
         setProfile(profileInfo);

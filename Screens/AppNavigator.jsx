@@ -8,6 +8,7 @@ import AddProfile from './scr/AddProfile';
 import Parent from './scr/Parent';
 import Contacts from './Drawer/Contacts';
 import NewContact from './Drawer/NewContact';
+import Message from './Drawer/Message';
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,12 @@ const AppNavigator = () => {
         <Stack.Screen
           name="New Contact"
           component={NewContact}
+          options={{ headerShown: false }} 
+        />
+
+        <Stack.Screen
+          name="Message"
+          component={Message}
           options={{ headerShown: false }} 
         />
 

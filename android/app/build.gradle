@@ -8,6 +8,9 @@ apply plugin: 'com.google.gms.google-services'
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
  apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+project.ext.react = [
+    enableHermes: true,  // Make sure Hermes is enabled
+]
 
  
 react {

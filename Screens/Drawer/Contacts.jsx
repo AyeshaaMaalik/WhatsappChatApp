@@ -12,7 +12,7 @@ const Contacts = () => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('New Contact')} // Navigate to Add Contact screen
+          onPress={() => navigation.navigate('New Contact')}
           style={{ marginRight: 15 }}
         >
           <Feather name="plus" size={24} color="black" />
@@ -21,12 +21,20 @@ const Contacts = () => {
     });
   }, [navigation]);
 
+  const handleContactPress = () => {
+    navigation.navigate('Message', {
+      contactName: name,
+      contactEmail: email,
+      contactProfilePic: profilePic,
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Contact Details</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('New Contact')} // Navigate to Add Contact screen
+          onPress={() => navigation.navigate('New Contact')} 
           style={{ marginRight: 15 }}
         >
           <Feather name="plus" size={24} color="white" />
@@ -34,16 +42,18 @@ const Contacts = () => {
       </View>
 
       {name ? (
-        <View style={styles.contactItem}>
-          <Image
-            source={{ uri: profilePic || 'https://placehold.co/100x100' }}
-            style={styles.profilePic}
-          />
-          <View style={styles.contactDetails}>
-            <Text style={styles.contactName}>{name}</Text>
-            <Text style={styles.contactEmail}>{email}</Text>
+        <TouchableOpacity onPress={handleContactPress}>
+          <View style={styles.contactItem}>
+            <Image
+              source={{ uri: profilePic || 'https://placehold.co/100x100' }}
+              style={styles.profilePic}
+            />
+            <View style={styles.contactDetails}>
+              <Text style={styles.contactName}>{name}</Text>
+              <Text style={styles.contactEmail}>{email}</Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
       ) : (
         <Text style={styles.placeholderText}>No contact details available.</Text>
       )}

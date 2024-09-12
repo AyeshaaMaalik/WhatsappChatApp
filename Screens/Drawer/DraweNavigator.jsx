@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Feather'; // Use Feather icons
+import Icon from 'react-native-vector-icons/Feather'; 
 
 import ShowProfile from './ShowProfile';
 import Main from './Main';

@@ -25,7 +25,6 @@ const LoginScreen = ({ navigation }) => {
       } else {
         try {
           await auth().signInWithEmailAndPassword(email, password);
-          // Pass the email to the Profile screen
           navigation.navigate('Parent', { screen: 'ShowProfile', params: { email } });
         } catch (error) {
           if (error.code === 'auth/user-not-found') {
