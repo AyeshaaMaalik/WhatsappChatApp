@@ -10,11 +10,10 @@ const MessageScreen = () => {
   const { contactName, contactEmail, contactProfilePic } = route.params || {};
   
   const [messages, setMessages] = useState([]);
-  const user = auth().currentUser || { uid: 'default_uid', displayName: 'Guest', photoURL: 'https://placehold.co/100x100' };
+  const user = auth().currentUser;
 
   useEffect(() => {
-    if (!contactEmail || !user.email) return;
-
+    if (!user || !contactEmail) return;
     const chatId = generateChatId(user.email, contactEmail);
 
     const unsubscribe = firestore()
@@ -34,29 +33,26 @@ const MessageScreen = () => {
       );
 
     return () => unsubscribe();
-  }, [contactEmail, user.email]);
+  }, [user.email, contactEmail]);
 
-  const onSend = useCallback(async (newMessages = []) => {
+  const onSend = useCallback((newMessages = []) => {
+    if (!user || !contactEmail) return;
     const chatId = generateChatId(user.email, contactEmail);
     const message = newMessages[0];
 
-    try {
-      await firestore()
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add({
-          ...message,
-          createdAt: new Date(),
-        });
+    firestore()
+      .collection('chats')
+      .doc(chatId)
+      .collection('messages')
+      .add({
+        ...message,
+        createdAt: new Date(),
+      });
 
-      setMessages((previousMessages) =>
-        GiftedChat.append(previousMessages, newMessages)
-      );
-    } catch (error) {
-      console.error('Error sending message: ', error);
-    }
-  }, [contactEmail, user.email]);
+    setMessages((previousMessages) =>
+      GiftedChat.append(previousMessages, newMessages)
+    );
+  }, [user.email, contactEmail]);
 
   const generateChatId = (email1, email2) => {
     return [email1, email2].sort().join('_');
@@ -80,13 +76,15 @@ const MessageScreen = () => {
         onSend={(newMessages) => onSend(newMessages)}
         user={{
           _id: user.uid,
-          name: user.displayName,
+          name: user.displayName || 'Anonymous',
           avatar: user.photoURL || 'https://placehold.co/100x100',
         }}
       />
     </View>
   );
 };
+
+export default MessageScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -118,5 +116,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-
-export default MessageScreen;
