@@ -49,7 +49,7 @@ const ContactScreen = () => {
 
   const handleAddContact = () => {
     if (profile) {
-      navigation.navigate('Contacts', {
+      navigation.navigate('Main', {
         name: profile.name,
         email: email,
         profilePic: profile.profilePicUrl,

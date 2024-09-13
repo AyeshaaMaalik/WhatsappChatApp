@@ -1,16 +1,83 @@
-import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Main = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { name, email, profilePic } = route.params || {};
+  
+  const [contacts, setContacts] = useState([]);
+
+  useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const storedContacts = await AsyncStorage.getItem('contacts');
+        if (storedContacts) {
+          setContacts(JSON.parse(storedContacts));
+        }
+      } catch (error) {
+        console.error('Failed to load contacts from storage:', error);
+      }
+    };
+
+    loadContacts();
+  }, []);
+
+  useEffect(() => {
+    if (name && email) {
+      const newContact = {
+        name,
+        email,
+        profilePic: profilePic || 'https://placehold.co/100x100',
+      };
+      const updatedContacts = [...contacts, newContact];
+      setContacts(updatedContacts);
+
+      const saveContacts = async () => {
+        try {
+          await AsyncStorage.setItem('contacts', JSON.stringify(updatedContacts));
+        } catch (error) {
+          console.error('Failed to save contacts to storage:', error);
+        }
+      };
+
+      saveContacts();
+    }
+  }, [route.params]);
+
+  const handleContactPress = (contact) => {
+    navigation.navigate('Message', {
+      contactName: contact.name,
+      contactEmail: contact.email,
+      contactProfilePic: contact.profilePic,
+    });
+  };
 
   return (
     <View style={styles.container}>
+      {contacts.length > 0 ? (
+        contacts.map((contact, index) => (
+          <TouchableOpacity key={index} onPress={() => handleContactPress(contact)}>
+            <View style={styles.contactItem}>
+              <Image
+                source={{ uri: contact.profilePic }}
+                style={styles.profilePic}
+              />
+              <View style={styles.contactDetails}>
+                <Text style={styles.contactName}>{contact.name}</Text>
+                <Text style={styles.contactEmail}>{contact.email}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text style={styles.placeholderText}>No contacts available</Text>
+      )}
 
-      <TouchableOpacity style={styles.fab} onPress={()=> navigation.navigate('Contacts')}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('New Contact')}>
         <Feather name="message-circle" size={30} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -21,26 +88,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  chatsList: {
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-  },
-  chatItem: {
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  chatName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
   },
   fab: {
     position: 'absolute',
@@ -53,6 +100,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginRight: 15,
+  },
+  contactDetails: {
+    flexDirection: 'column',
+  },
+  contactName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  contactEmail: {
+    fontSize: 18,
+    color: '#666',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 
