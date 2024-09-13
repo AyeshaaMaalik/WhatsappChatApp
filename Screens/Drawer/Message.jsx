@@ -1,38 +1,42 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Image, Text } from 'react-native';
-import { GiftedChat } from 'react-native-gifted-chat';
-import firestore from '@react-native-firebase/firestore';
+import { StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
+import { GiftedChat, Bubble, InputToolbar } from 'react-native-gifted-chat';
+import database from '@react-native-firebase/database';
 import auth from '@react-native-firebase/auth';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import Feather from 'react-native-vector-icons/Feather';  // Using Feather icons for the back button
 
 const MessageScreen = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const { contactName, contactEmail, contactProfilePic } = route.params || {};
-  
+
   const [messages, setMessages] = useState([]);
   const user = auth().currentUser;
 
   useEffect(() => {
     if (!user || !contactEmail) return;
+
     const chatId = generateChatId(user.email, contactEmail);
 
-    const unsubscribe = firestore()
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .orderBy('createdAt', 'desc')
-      .onSnapshot((snapshot) =>
-        setMessages(
-          snapshot.docs.map(doc => ({
-            _id: doc.id,
-            text: doc.data().text,
-            createdAt: doc.data().createdAt.toDate(),
-            user: doc.data().user,
-          }))
-        )
-      );
+    const messageRef = database()
+      .ref(`chats/${chatId}/messages`)
+      .orderByChild('createdAt');
 
-    return () => unsubscribe();
+    const onValueChange = messageRef.on('value', snapshot => {
+      const messagesArray = [];
+      snapshot.forEach((childSnapshot) => {
+        messagesArray.push({
+          _id: childSnapshot.key,
+          text: childSnapshot.val().text,
+          createdAt: new Date(childSnapshot.val().createdAt),
+          user: childSnapshot.val().user,
+        });
+      });
+      setMessages(messagesArray.reverse());
+    });
+
+    return () => messageRef.off('value', onValueChange);
   }, [user.email, contactEmail]);
 
   const onSend = useCallback((newMessages = []) => {
@@ -40,13 +44,11 @@ const MessageScreen = () => {
     const chatId = generateChatId(user.email, contactEmail);
     const message = newMessages[0];
 
-    firestore()
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .add({
+    database()
+      .ref(`chats/${chatId}/messages`)
+      .push({
         ...message,
-        createdAt: new Date(),
+        createdAt: new Date().getTime(),
       });
 
     setMessages((previousMessages) =>
@@ -55,12 +57,39 @@ const MessageScreen = () => {
   }, [user.email, contactEmail]);
 
   const generateChatId = (email1, email2) => {
-    return [email1, email2].sort().join('_');
+    const safeEmail1 = email1.replace(/[.#$[\]]/g, '_');
+    const safeEmail2 = email2.replace(/[.#$[\]]/g, '_');
+    return [safeEmail1, safeEmail2].sort().join('_');
   };
+
+  const renderBubble = (props) => (
+    <Bubble
+      {...props}
+      wrapperStyle={{
+        left: {
+          backgroundColor: '#ece5dd', 
+        },
+        right: {
+          backgroundColor: '#dcf8c6', 
+        },
+      }}
+      textStyle={{
+        left: {
+          color: 'black',  
+        },
+        right: {
+          color: 'black',  
+        },
+      }}
+    />
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
         <Image
           source={{ uri: contactProfilePic || 'https://placehold.co/100x100' }}
           style={styles.profilePic}
@@ -79,6 +108,9 @@ const MessageScreen = () => {
           name: user.displayName || 'Anonymous',
           avatar: user.photoURL || 'https://placehold.co/100x100',
         }}
+        renderBubble={renderBubble}
+        textInputStyle={{ color: 'black' }}  
+        placeholderTextColor="gray"         
       />
     </View>
   );
@@ -89,30 +121,33 @@ export default MessageScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#ece5dd',  
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#075E54',
+    backgroundColor: '#075E54', 
+    elevation: 4, 
+    height: 60,
   },
   profilePic: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginLeft: 15,
   },
   contactInfo: {
     flexDirection: 'column',
+    marginLeft: 10,
   },
   contactName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
   },
   contactEmail: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#fff',
   },
 });
