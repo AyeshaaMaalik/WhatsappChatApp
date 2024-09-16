@@ -7,6 +7,9 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Slider from '@react-native-community/slider';
+import { launchCamera } from 'react-native-image-picker';
+import storage from '@react-native-firebase/storage';
+import { v4 as uuidv4 } from 'uuid';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
@@ -33,7 +36,6 @@ const MessageScreen = () => {
       const messagesArray = [];
       snapshot.forEach(childSnapshot => {
         const { text, audio, createdAt, user } = childSnapshot.val();
-        console.log('Fetched audio URL:', audio); // Debugging line
         messagesArray.push({
           _id: childSnapshot.key,
           text: text || '',
@@ -45,8 +47,10 @@ const MessageScreen = () => {
       setMessages(messagesArray.reverse());
     });
 
-    return () => messageRef.off('value', onValueChange);
-  }, [user.email, contactEmail]);
+    return () => {
+      messageRef.off('value', onValueChange);
+    };
+  }, [user, contactEmail]);
 
   const onSend = useCallback((newMessages = []) => {
     if (!user || !contactEmail) return;
@@ -59,7 +63,7 @@ const MessageScreen = () => {
     });
 
     setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
-  }, [user.email, contactEmail]);
+  }, [user, contactEmail]);
 
   const generateChatId = (email1, email2) => {
     const safeEmail1 = email1.replace(/[.#$[\]]/g, '_');
@@ -89,7 +93,7 @@ const MessageScreen = () => {
       const chatId = generateChatId(user.email, contactEmail);
       const audioMessage = {
         _id: new Date().getTime().toString(),
-        audio: result, // Store the URL or path to the audio file
+        audio: result, 
         createdAt: new Date().getTime(),
         user: {
           _id: user.uid,
@@ -97,7 +101,7 @@ const MessageScreen = () => {
         },
       };
 
-      database().ref(`chats/${chatId}/messages`).push(audioMessage);
+      await database().ref(`chats/${chatId}/messages`).push(audioMessage);
       setMessages(previousMessages => GiftedChat.append(previousMessages, [audioMessage]));
     } catch (error) {
       Alert.alert('Error', 'Failed to stop recording.');
@@ -115,7 +119,7 @@ const MessageScreen = () => {
           return;
         }
         setIsPlaying(true);
-        console.log('Playing audio from:', audioUrl); // Debugging line
+        console.log('Playing audio from:', audioUrl);
         await audioRecorderPlayer.startPlayer(audioUrl);
         audioRecorderPlayer.addPlayBackListener((e) => {
           setPlaybackPosition(e.current_position);
@@ -126,7 +130,7 @@ const MessageScreen = () => {
         });
       }
     } catch (error) {
-      console.error('Error playing audio:', error); 
+      console.error('Error playing audio:', error);
       Alert.alert('Error', 'Failed to play audio.');
     }
   };
@@ -138,8 +142,46 @@ const MessageScreen = () => {
       audioRecorderPlayer.removePlayBackListener();
       setPlaybackPosition(0);
     } catch (error) {
-      console.error('Error stopping audio:', error); // Enhanced error logging
+      console.error('Error stopping audio:', error);
       Alert.alert('Error', 'Failed to stop audio.');
+    }
+  };
+
+  const openCamera = () => {
+    launchCamera({ mediaType: 'photo' }, async (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else {
+        const { uri, fileName, type } = response.assets[0];
+        await uploadImage(uri, fileName, type);
+      }
+    });
+  };
+
+  const uploadImage = async (uri, fileName, type) => {
+    const chatId = generateChatId(user.email, contactEmail);
+    const imageRef = storage().ref(`chats/${chatId}/images/${fileName}`);
+
+    try {
+      await imageRef.putFile(uri, { contentType: type });
+      const imageUrl = await imageRef.getDownloadURL();
+      const imageMessage = {
+        _id: new Date().getTime().toString(),
+        image: imageUrl,
+        createdAt: new Date().getTime(),
+        user: {
+          _id: user.uid,
+          name: user.displayName || 'Anonymous',
+        },
+      };
+
+      await database().ref(`chats/${chatId}/messages`).push(imageMessage);
+      setMessages(previousMessages => GiftedChat.append(previousMessages, [imageMessage]));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image.');
     }
   };
 
@@ -166,6 +208,17 @@ const MessageScreen = () => {
       );
     }
 
+    if (currentMessage.image) {
+      return (
+        <View style={[
+          styles.imageContainer,
+          currentMessage.user._id === user.uid ? styles.sentImage : styles.receivedImage
+        ]}>
+          <Image source={{ uri: currentMessage.image }} style={styles.image} />
+        </View>
+      );
+    }
+
     return <Bubble {...props} />;
   };
 
@@ -184,13 +237,21 @@ const MessageScreen = () => {
   );
 
   const renderActions = () => (
-    <TouchableOpacity
-      style={styles.voiceButton}
-      onPress={isRecording ? stopRecording : startRecording}
-    >
-      <Feather name={isRecording ? 'mic-off' : 'mic'} size={24} color="#075E54" />
-      {isRecording && <Text>{(recordingDuration / 1000).toFixed(1)}s</Text>}
-    </TouchableOpacity>
+    <View style={styles.actionsContainer}>
+      <TouchableOpacity
+        style={styles.voiceButton}
+        onPress={isRecording ? stopRecording : startRecording}
+      >
+        <Feather name={isRecording ? 'mic-off' : 'mic'} size={24} color="#075E54" />
+        {isRecording && <Text>{(recordingDuration / 1000).toFixed(1)}s</Text>}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.cameraButton}
+        onPress={openCamera}
+      >
+        <Feather name="camera" size={24} color="#075E54" />
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -204,24 +265,16 @@ const MessageScreen = () => {
           style={styles.profilePic}
         />
         <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{contactName}</Text>
-          <Text style={styles.contactEmail}>{contactEmail}</Text>
+          <Text style={styles.contactName}>{contactName || 'Contact'}</Text>
         </View>
       </View>
-
       <GiftedChat
         messages={messages}
-        onSend={(newMessages) => onSend(newMessages)}
-        user={{
-          _id: user.uid,
-          name: user.displayName || 'Anonymous',
-          avatar: user.photoURL || 'https://placehold.co/100x100',
-        }}
+        onSend={onSend}
+        user={{ _id: user.uid }}
         renderBubble={renderBubble}
-        renderTime={renderTime}
         renderActions={renderActions}
-        textInputStyle={{ color: 'black' }}
-        placeholderTextColor="gray"
+        renderTime={renderTime}
       />
     </View>
   );
@@ -230,57 +283,77 @@ const MessageScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ece5dd',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     backgroundColor: '#075E54',
-    elevation: 4,
-    height: 60,
   },
   profilePic: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginLeft: 15,
+    marginHorizontal: 10,
   },
   contactInfo: {
-    flexDirection: 'column',
-    marginLeft: 10,
+    flex: 1,
+    justifyContent: 'center',
   },
   contactName: {
+    color: '#fff',
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
   },
-  contactEmail: {
-    fontSize: 14,
-    color: '#fff',
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 10,
   },
   voiceButton: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 10,
+    marginHorizontal: 10,
+  },
+  cameraButton: {
+    marginHorizontal: 10,
   },
   audioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 5,
   },
   audioSlider: {
-    width: 120,
-    marginLeft: 10,
+    flex: 1,
+    height: 40,
   },
   sentAudio: {
-    backgroundColor: '#dcf8c6',
+    alignSelf: 'flex-end',
+    backgroundColor: '#e1ffc7',
+    borderRadius: 5,
     padding: 10,
-    borderRadius: 20,
   },
   receivedAudio: {
-    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
     padding: 10,
-    borderRadius: 20,
+  },
+  imageContainer: {
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginVertical: 5,
+  },
+  sentImage: {
+    alignSelf: 'flex-end',
+  },
+  receivedImage: {
+    alignSelf: 'flex-start',
+  },
+  image: {
+    width: 150,
+    height: 150,
   },
 });
 
