@@ -33,6 +33,7 @@ const MessageScreen = () => {
       const messagesArray = [];
       snapshot.forEach(childSnapshot => {
         const { text, audio, createdAt, user } = childSnapshot.val();
+        console.log('Fetched audio URL:', audio); // Debugging line
         messagesArray.push({
           _id: childSnapshot.key,
           text: text || '',
@@ -88,7 +89,7 @@ const MessageScreen = () => {
       const chatId = generateChatId(user.email, contactEmail);
       const audioMessage = {
         _id: new Date().getTime().toString(),
-        audio: result,
+        audio: result, // Store the URL or path to the audio file
         createdAt: new Date().getTime(),
         user: {
           _id: user.uid,
@@ -108,7 +109,13 @@ const MessageScreen = () => {
       if (isPlaying) {
         await stopAudio();
       } else {
+        if (!audioUrl) {
+          console.error('No audio URL provided');
+          Alert.alert('Error', 'No audio URL provided.');
+          return;
+        }
         setIsPlaying(true);
+        console.log('Playing audio from:', audioUrl); // Debugging line
         await audioRecorderPlayer.startPlayer(audioUrl);
         audioRecorderPlayer.addPlayBackListener((e) => {
           setPlaybackPosition(e.current_position);
@@ -119,6 +126,7 @@ const MessageScreen = () => {
         });
       }
     } catch (error) {
+      console.error('Error playing audio:', error); 
       Alert.alert('Error', 'Failed to play audio.');
     }
   };
@@ -130,6 +138,7 @@ const MessageScreen = () => {
       audioRecorderPlayer.removePlayBackListener();
       setPlaybackPosition(0);
     } catch (error) {
+      console.error('Error stopping audio:', error); // Enhanced error logging
       Alert.alert('Error', 'Failed to stop audio.');
     }
   };
@@ -144,7 +153,7 @@ const MessageScreen = () => {
           currentMessage.user._id === user.uid ? styles.sentAudio : styles.receivedAudio
         ]}>
           <TouchableOpacity onPress={() => playAudio(currentMessage.audio)}>
-            <Feather name={isPlaying ? 'pause' : 'play'} size={24} color="#075E54" />
+            <Feather name={isPlaying ? 'pause' : 'play'} size={24} color="yellow" />
           </TouchableOpacity>
           <Slider
             style={styles.audioSlider}
@@ -218,8 +227,6 @@ const MessageScreen = () => {
   );
 };
 
-export default MessageScreen;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -266,13 +273,15 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   sentAudio: {
-    backgroundColor: '#DCF8C6',
-    padding: 5,
-    borderRadius: 10,
+    backgroundColor: '#dcf8c6',
+    padding: 10,
+    borderRadius: 20,
   },
   receivedAudio: {
-    backgroundColor: '#ECE5DD',
-    padding: 5,
-    borderRadius: 10,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 20,
   },
 });
+
+export default MessageScreen;

@@ -2,29 +2,13 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Main = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { name, email, profilePic } = route.params || {};
-  
+
   const [contacts, setContacts] = useState([]);
-
-  useEffect(() => {
-    const loadContacts = async () => {
-      try {
-        const storedContacts = await AsyncStorage.getItem('contacts');
-        if (storedContacts) {
-          setContacts(JSON.parse(storedContacts));
-        }
-      } catch (error) {
-        console.error('Failed to load contacts from storage:', error);
-      }
-    };
-
-    loadContacts();
-  }, []);
 
   useEffect(() => {
     if (name && email) {
@@ -33,18 +17,7 @@ const Main = () => {
         email,
         profilePic: profilePic || 'https://placehold.co/100x100',
       };
-      const updatedContacts = [...contacts, newContact];
-      setContacts(updatedContacts);
-
-      const saveContacts = async () => {
-        try {
-          await AsyncStorage.setItem('contacts', JSON.stringify(updatedContacts));
-        } catch (error) {
-          console.error('Failed to save contacts to storage:', error);
-        }
-      };
-
-      saveContacts();
+      setContacts(prevContacts => [...prevContacts, newContact]);
     }
   }, [route.params]);
 
