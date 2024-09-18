@@ -140,12 +140,12 @@ const MessageScreen = () => {
   const pickDocument = async () => {
     try {
       const res = await DocumentPicker.pick({
-        type: [DocumentPicker.types.allFiles],
+        type: [DocumentPicker.types.pdf], // Only allow PDFs
       });
-
+  
       const { uri, name, type } = res[0];
-      console.log('Document selected:', { uri, name, type });
-
+      console.log('PDF selected:', { uri, name, type });
+  
       await uploadDocument(uri, name, type);
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
@@ -156,6 +156,7 @@ const MessageScreen = () => {
       }
     }
   };
+  
 
   const uploadDocument = async (uri, fileName, type) => {
     const chatId = generateChatId(user.email, contactEmail);
