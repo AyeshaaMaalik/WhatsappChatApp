@@ -9,7 +9,7 @@ import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Slider from '@react-native-community/slider';
 import { launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
-import { v4 as uuidv4 } from 'uuid';
+import DocumentPicker from 'react-native-document-picker';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
@@ -35,11 +35,13 @@ const MessageScreen = () => {
     const onValueChange = messageRef.on('value', snapshot => {
       const messagesArray = [];
       snapshot.forEach(childSnapshot => {
-        const { text, audio, createdAt, user } = childSnapshot.val();
+        const { text, audio, image, document, createdAt, user } = childSnapshot.val();
         messagesArray.push({
           _id: childSnapshot.key,
           text: text || '',
           audio: audio || null,
+          image: image || null,
+          document: document || null,
           createdAt: new Date(createdAt),
           user,
         });
@@ -93,7 +95,7 @@ const MessageScreen = () => {
       const chatId = generateChatId(user.email, contactEmail);
       const audioMessage = {
         _id: new Date().getTime().toString(),
-        audio: result, 
+        audio: result,
         createdAt: new Date().getTime(),
         user: {
           _id: user.uid,
@@ -132,6 +134,57 @@ const MessageScreen = () => {
     } catch (error) {
       console.error('Error playing audio:', error);
       Alert.alert('Error', 'Failed to play audio.');
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const res = await DocumentPicker.pick({
+        type: [DocumentPicker.types.allFiles],
+      });
+
+      const { uri, name, type } = res[0];
+      console.log('Document selected:', { uri, name, type });
+
+      await uploadDocument(uri, name, type);
+    } catch (error) {
+      if (DocumentPicker.isCancel(error)) {
+        console.log('User cancelled document picker');
+      } else {
+        console.error('DocumentPicker Error: ', error);
+        Alert.alert('Error', 'Failed to pick document.');
+      }
+    }
+  };
+
+  const uploadDocument = async (uri, fileName, type) => {
+    const chatId = generateChatId(user.email, contactEmail);
+    const documentRef = storage().ref(`chats/${chatId}/documents/${fileName}`);
+
+    try {
+      console.log('Uploading document:', { uri, fileName, type });
+
+      await documentRef.putFile(uri, { contentType: type });
+      const documentUrl = await documentRef.getDownloadURL();
+
+      console.log('Document uploaded successfully, URL:', documentUrl);
+
+      const documentMessage = {
+        _id: new Date().getTime().toString(),
+        document: documentUrl,
+        fileName,
+        createdAt: new Date().getTime(),
+        user: {
+          _id: user.uid,
+          name: user.displayName || 'Anonymous',
+        },
+      };
+
+      await database().ref(`chats/${chatId}/messages`).push(documentMessage);
+      setMessages(previousMessages => GiftedChat.append(previousMessages, [documentMessage]));
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      Alert.alert('Error', 'Failed to upload document.');
     }
   };
 
@@ -195,15 +248,22 @@ const MessageScreen = () => {
           currentMessage.user._id === user.uid ? styles.sentAudio : styles.receivedAudio
         ]}>
           <TouchableOpacity onPress={() => playAudio(currentMessage.audio)}>
-            <Feather name={isPlaying ? 'pause' : 'play'} size={24} color="yellow" />
+            <Feather name={isPlaying ? 'pause' : 'play'} size={24} color="#075E54" />
           </TouchableOpacity>
-          <Slider
+          {isPlaying && <Slider
             style={styles.audioSlider}
             value={playbackPosition}
             minimumValue={0}
             maximumValue={duration}
-            onSlidingComplete={async (value) => await audioRecorderPlayer.seekToPlayer(value)}
-          />
+            onValueChange={value => setPlaybackPosition(value)}
+            onSlidingComplete={async (value) => {
+              await audioRecorderPlayer.seekToPlayer(value);
+              setPlaybackPosition(value);
+            }}
+          />}
+          <Text style={styles.audioDuration}>
+            {audioRecorderPlayer.mmssss(Math.floor(playbackPosition))} / {audioRecorderPlayer.mmssss(Math.floor(duration))}
+          </Text>
         </View>
       );
     }
@@ -219,63 +279,63 @@ const MessageScreen = () => {
       );
     }
 
+    if (currentMessage.document) {
+      return (
+        <View style={[
+          styles.documentContainer,
+          currentMessage.user._id === user.uid ? styles.sentDocument : styles.receivedDocument
+        ]}>
+          <TouchableOpacity onPress={() => downloadDocument(currentMessage.document)}>
+            <Text style={styles.documentText}>{currentMessage.fileName}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return <Bubble {...props} />;
   };
 
-  const renderTime = (props) => (
-    <Time
-      {...props}
-      timeTextStyle={{
-        left: {
-          color: 'black',
-        },
-        right: {
-          color: 'black',
-        },
-      }}
-    />
-  );
-
-  const renderActions = () => (
-    <View style={styles.actionsContainer}>
-      <TouchableOpacity
-        style={styles.voiceButton}
-        onPress={isRecording ? stopRecording : startRecording}
-      >
-        <Feather name={isRecording ? 'mic-off' : 'mic'} size={24} color="#075E54" />
-        {isRecording && <Text>{(recordingDuration / 1000).toFixed(1)}s</Text>}
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.cameraButton}
-        onPress={openCamera}
-      >
-        <Feather name="camera" size={24} color="#075E54" />
-      </TouchableOpacity>
-    </View>
-  );
+  const downloadDocument = async (documentUrl) => {
+    try {
+      console.log('Downloading document from:', documentUrl);
+      Alert.alert('Info', 'Document downloaded.');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      Alert.alert('Error', 'Failed to download document.');
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color="#fff" />
+          <Feather name="arrow-left" size={24} color="white" />
         </TouchableOpacity>
-        <Image
-          source={{ uri: contactProfilePic || 'https://placehold.co/100x100' }}
-          style={styles.profilePic}
-        />
-        <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{contactName || 'Contact'}</Text>
-        </View>
+        <Image source={{ uri: contactProfilePic }} style={styles.profileImage} />
+        <Text style={styles.contactName}>{contactName}</Text>
       </View>
       <GiftedChat
         messages={messages}
         onSend={onSend}
-        user={{ _id: user.uid }}
+        user={{
+          _id: user.uid,
+          name: user.displayName || 'Anonymous',
+        }}
         renderBubble={renderBubble}
-        renderActions={renderActions}
-        renderTime={renderTime}
+        renderTime={props => <Time {...props} timeFormat='h:mm A' />}
+        showUserAvatar
       />
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={openCamera} style={styles.cameraButton}>
+          <Feather name="camera" size={24} color="#075E54" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={pickDocument} style={styles.documentButton}>
+          <Feather name="file" size={24} color="#075E54" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={isRecording ? stopRecording : startRecording} style={styles.recordButton}>
+          <Feather name={isRecording ? 'stop-circle' : 'mic'} size={24} color="#075E54" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -288,72 +348,90 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
     backgroundColor: '#075E54',
+    padding: 10,
   },
-  profilePic: {
+  profileImage: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginHorizontal: 10,
-  },
-  contactInfo: {
-    flex: 1,
-    justifyContent: 'center',
+    marginLeft: 10,
   },
   contactName: {
-    color: '#fff',
+    color: 'white',
     fontSize: 18,
+    marginLeft: 10,
   },
-  actionsContainer: {
+
+  footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 10,
-  },
-  voiceButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'space-around',
     padding: 10,
-    marginHorizontal: 10,
   },
   cameraButton: {
+    marginHorizontal: 10,
+  },
+  documentButton: {
+    marginHorizontal: 10,
+  },
+  recordButton: {
     marginHorizontal: 10,
   },
   audioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 5,
-  },
-  audioSlider: {
-    flex: 1,
-    height: 40,
   },
   sentAudio: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#e1ffc7',
-    borderRadius: 5,
+    backgroundColor: '#DCF8C6',
+    borderRadius: 20,
     padding: 10,
+    marginVertical: 5,
+    marginHorizontal: 10,
   },
   receivedAudio: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
+    backgroundColor: '#ECECEC',
+    borderRadius: 20,
     padding: 10,
+    marginVertical: 5,
+    marginHorizontal: 10,
   },
-  imageContainer: {
-    borderRadius: 5,
-    overflow: 'hidden',
+  audioSlider: {
+    width: '100%',
+    height: 40,
     marginVertical: 5,
   },
+  audioDuration: {
+    color: '#757575',
+  },
+  imageContainer: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    margin: 5,
+  },
   sentImage: {
-    alignSelf: 'flex-end',
+    backgroundColor: '#DCF8C6',
   },
   receivedImage: {
-    alignSelf: 'flex-start',
+    backgroundColor: '#ECECEC',
   },
   image: {
     width: 150,
     height: 150,
+  },
+  documentContainer: {
+    borderRadius: 10,
+    backgroundColor: '#ECECEC',
+    padding: 10,
+    margin: 5,
+  },
+  sentDocument: {
+    backgroundColor: '#DCF8C6',
+  },
+  receivedDocument: {
+    backgroundColor: '#ECECEC',
+  },
+  documentText: {
+    color: '#075E54',
   },
 });
 
