@@ -13,7 +13,7 @@
       android:allowBackup="false"
       android:theme="@style/AppTheme"
       android:requestLegacyExternalStorage="true"
-
+      android:hardwareAccelerated="true" 
       android:supportsRtl="true">
       <activity
         android:name=".MainActivity"

@@ -10,6 +10,7 @@ import Slider from '@react-native-community/slider';
 import { launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
@@ -72,6 +73,7 @@ const MessageScreen = () => {
     const safeEmail2 = email2.replace(/[.#$[\]]/g, '_');
     return [safeEmail1, safeEmail2].sort().join('_');
   };
+  
 
   const startRecording = async () => {
     try {
@@ -140,12 +142,12 @@ const MessageScreen = () => {
   const pickDocument = async () => {
     try {
       const res = await DocumentPicker.pick({
-        type: [DocumentPicker.types.pdf], // Only allow PDFs
+        type: [DocumentPicker.types.pdf],
       });
-  
+
       const { uri, name, type } = res[0];
       console.log('PDF selected:', { uri, name, type });
-  
+
       await uploadDocument(uri, name, type);
     } catch (error) {
       if (DocumentPicker.isCancel(error)) {
@@ -156,16 +158,15 @@ const MessageScreen = () => {
       }
     }
   };
-  
-
   const uploadDocument = async (uri, fileName, type) => {
     const chatId = generateChatId(user.email, contactEmail);
     const documentRef = storage().ref(`chats/${chatId}/documents/${fileName}`);
 
     try {
       console.log('Uploading document:', { uri, fileName, type });
+      const filePath = await RNFetchBlob.fs.stat(uri).then((stats) => stats.path);
 
-      await documentRef.putFile(uri, { contentType: type });
+      await documentRef.putFile(filePath, { contentType: type });
       const documentUrl = await documentRef.getDownloadURL();
 
       console.log('Document uploaded successfully, URL:', documentUrl);
@@ -186,6 +187,35 @@ const MessageScreen = () => {
     } catch (error) {
       console.error('Error uploading document:', error);
       Alert.alert('Error', 'Failed to upload document.');
+    }
+  };
+
+  const downloadDocument = async (documentUrl) => {
+    try {
+      const { config, fs } = RNFetchBlob;
+      const filePath = `${fs.dirs.DownloadDir}/DownloadedDocument.pdf`; // Destination where the document will be saved
+
+      config({
+        fileCache: true,
+        addAndroidDownloads: {
+          useDownloadManager: true,
+          notification: true,
+          path: filePath,
+          description: 'Downloading document',
+        },
+      })
+        .fetch('GET', documentUrl)
+        .then((res) => {
+          console.log('Document downloaded to:', res.path());
+          Alert.alert('Success', 'Document downloaded successfully.');
+        })
+        .catch((error) => {
+          console.error('Document download failed:', error);
+          Alert.alert('Error', 'Failed to download document.');
+        });
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      Alert.alert('Error', 'Failed to download document.');
     }
   };
 
@@ -296,16 +326,6 @@ const MessageScreen = () => {
     return <Bubble {...props} />;
   };
 
-  const downloadDocument = async (documentUrl) => {
-    try {
-      console.log('Downloading document from:', documentUrl);
-      Alert.alert('Info', 'Document downloaded.');
-    } catch (error) {
-      console.error('Error downloading document:', error);
-      Alert.alert('Error', 'Failed to download document.');
-    }
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -325,6 +345,15 @@ const MessageScreen = () => {
         renderBubble={renderBubble}
         renderTime={props => <Time {...props} timeFormat='h:mm A' />}
         showUserAvatar
+        textInputStyle={{ color: 'black', }}
+        parsePatterns={(linkStyle) => [
+          {
+            pattern: /(\d{2}\/\d{2}\/\d{4})/, 
+            style: linkStyle,
+            onPress: (text) => console.log(`Pressed on ${text}`),
+          },
+        ]}
+
       />
       <View style={styles.footer}>
         <TouchableOpacity onPress={openCamera} style={styles.cameraButton}>
