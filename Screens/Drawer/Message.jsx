@@ -161,16 +161,14 @@ const MessageScreen = () => {
   const uploadDocument = async (uri, fileName, type) => {
     const chatId = generateChatId(user.email, contactEmail);
     const documentRef = storage().ref(`chats/${chatId}/documents/${fileName}`);
-
+  
     try {
-      console.log('Uploading document:', { uri, fileName, type });
       const filePath = await RNFetchBlob.fs.stat(uri).then((stats) => stats.path);
-
+  
       await documentRef.putFile(filePath, { contentType: type });
       const documentUrl = await documentRef.getDownloadURL();
-
-      console.log('Document uploaded successfully, URL:', documentUrl);
-
+      console.log('Document URL:', documentUrl); // Check the URL here
+  
       const documentMessage = {
         _id: new Date().getTime().toString(),
         document: documentUrl,
@@ -181,7 +179,7 @@ const MessageScreen = () => {
           name: user.displayName || 'Anonymous',
         },
       };
-
+  
       await database().ref(`chats/${chatId}/messages`).push(documentMessage);
       setMessages(previousMessages => GiftedChat.append(previousMessages, [documentMessage]));
     } catch (error) {
@@ -189,11 +187,12 @@ const MessageScreen = () => {
       Alert.alert('Error', 'Failed to upload document.');
     }
   };
+  
 
   const downloadDocument = async (documentUrl) => {
     try {
       const { config, fs } = RNFetchBlob;
-      const filePath = `${fs.dirs.DownloadDir}/DownloadedDocument.pdf`; // Destination where the document will be saved
+      const filePath = `${fs.dirs.DownloadDir}/DownloadedDocument.pdf`;
 
       config({
         fileCache: true,
@@ -299,7 +298,7 @@ const MessageScreen = () => {
       );
     }
 
-    if (currentMessage.image) {
+    else if (currentMessage.image) {
       return (
         <View style={[
           styles.imageContainer,
@@ -310,14 +309,14 @@ const MessageScreen = () => {
       );
     }
 
-    if (currentMessage.document) {
+    else if (currentMessage.document) {
       return (
         <View style={[
           styles.documentContainer,
           currentMessage.user._id === user.uid ? styles.sentDocument : styles.receivedDocument
         ]}>
           <TouchableOpacity onPress={() => downloadDocument(currentMessage.document)}>
-            <Text style={styles.documentText}>{currentMessage.fileName}</Text>
+            <Text style={styles.documentText}>{currentMessage.fileName || 'Document'}</Text>
           </TouchableOpacity>
         </View>
       );
