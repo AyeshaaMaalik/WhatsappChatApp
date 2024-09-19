@@ -6,7 +6,6 @@ import auth from '@react-native-firebase/auth';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import Feather from 'react-native-vector-icons/Feather';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import Slider from '@react-native-community/slider';
 import { launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
@@ -25,7 +24,7 @@ const MessageScreen = () => {
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const user = auth().currentUser;
-  const [playingAudioId, setPlayingAudioId] = useState(null); // Track which message's audio is playing
+  const [playingAudioId, setPlayingAudioId] = useState(null); 
 
   useEffect(() => {
     if (!user || !contactEmail) return;
@@ -137,28 +136,25 @@ const stopRecording = async () => {
   };
   const playAudio = async (url, messageId) => {
     if (playingAudioId === messageId) {
-      // If the same audio is already playing, stop it
       await audioRecorderPlayer.stopPlayer();
-      setPlayingAudioId(null); // Reset the playing audio ID
+      setPlayingAudioId(null); 
     } else {
       if (playingAudioId) {
-        // Stop any currently playing audio
         await audioRecorderPlayer.stopPlayer();
       }
       
-      // Start playing new audio
       await audioRecorderPlayer.startPlayer(url);
       audioRecorderPlayer.addPlayBackListener((e) => {
         setPlaybackPosition(e.current_position);
         setDuration(e.duration);
   
         if (e.current_position === e.duration) {
-          setPlayingAudioId(null); // Stop playing when the audio finishes
+          setPlayingAudioId(null);
         }
         return;
       });
   
-      setPlayingAudioId(messageId); // Set the currently playing audio ID
+      setPlayingAudioId(messageId); 
     }
   };
   // document
@@ -214,7 +210,7 @@ const stopRecording = async () => {
   const downloadDocument = async (documentUrl) => {
     try {
       const { config, fs } = RNFetchBlob;
-      const filePath = `${fs.dirs.DownloadDir}/${new Date().getTime()}.pdf`; // Dynamic filename
+      const filePath = `${fs.dirs.DownloadDir}/${new Date().getTime()}.pdf`; 
   
       config({
         fileCache: true,
