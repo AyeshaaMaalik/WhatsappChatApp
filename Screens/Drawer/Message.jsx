@@ -25,6 +25,7 @@ const MessageScreen = () => {
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const user = auth().currentUser;
+  const [playingAudioId, setPlayingAudioId] = useState(null); // Track which message's audio is playing
 
   useEffect(() => {
     if (!user || !contactEmail) return;
@@ -73,37 +74,41 @@ const MessageScreen = () => {
     return [safeEmail1, safeEmail2].sort().join('_');
   };
   // audio
+const startRecording = async () => {
+  setIsRecording(true);
+  const path = `audio_${new Date().getTime()}.m4a`;
+  const uri = `${RNFetchBlob.fs.dirs.CacheDir}/${path}`;
 
-  const startRecording = async () => {
-    setIsRecording(true);
-    const path = `audio_${new Date().getTime()}.m4a`; // Change this to suit your requirements
-    const uri = `${RNFetchBlob.fs.dirs.CacheDir}/${path}`;
+  try {
+    await audioRecorderPlayer.startRecorder(uri);
+    setRecordedAudioPath(uri);  
+    audioRecorderPlayer.addRecordBackListener((e) => {
+      setPlaybackPosition(e.current_position);
+      setDuration(e.duration);
+      return;
+    });
+  } catch (error) {
+    console.error('Failed to start recording', error);
+    Alert.alert('Error', 'Failed to start recording.');
+  }
+};
 
-    try {
-      await audioRecorderPlayer.startRecorder(uri);
-      audioRecorderPlayer.addRecordBackListener((e) => {
-        setPlaybackPosition(e.current_position);
-        setDuration(e.duration);
-        return;
-      });
-      setRecordedAudioPath(uri);
-    } catch (error) {
-      console.error('Failed to start recording', error);
-      Alert.alert('Error', 'Failed to start recording.');
+const stopRecording = async () => {
+  setIsRecording(false);
+  try {
+    const result = await audioRecorderPlayer.stopRecorder();
+    audioRecorderPlayer.removeRecordBackListener();
+    if (recordedAudioPath) {
+      await uploadAudio(recordedAudioPath); 
+    } else {
+      console.error('No recorded audio path set');
+      Alert.alert('Error', 'No recorded audio path available.');
     }
-  };
-
-  const stopRecording = async () => {
-    setIsRecording(false);
-    try {
-      const result = await audioRecorderPlayer.stopRecorder();
-      audioRecorderPlayer.removeRecordBackListener();
-      await uploadAudio(result);
-    } catch (error) {
-      console.error('Failed to stop recording', error);
-      Alert.alert('Error', 'Failed to stop recording.');
-    }
-  };
+  } catch (error) {
+    console.error('Failed to stop recording', error);
+    Alert.alert('Error', 'Failed to stop recording.');
+  }
+};
 
   const uploadAudio = async (uri) => {
     const chatId = generateChatId(user.email, contactEmail);
@@ -130,25 +135,32 @@ const MessageScreen = () => {
       Alert.alert('Error', 'Failed to upload audio.');
     }
   };
-
-  const playAudio = async (url) => {
-    if (isPlaying) {
+  const playAudio = async (url, messageId) => {
+    if (playingAudioId === messageId) {
+      // If the same audio is already playing, stop it
       await audioRecorderPlayer.stopPlayer();
-      setIsPlaying(false);
+      setPlayingAudioId(null); // Reset the playing audio ID
     } else {
+      if (playingAudioId) {
+        // Stop any currently playing audio
+        await audioRecorderPlayer.stopPlayer();
+      }
+      
+      // Start playing new audio
       await audioRecorderPlayer.startPlayer(url);
       audioRecorderPlayer.addPlayBackListener((e) => {
         setPlaybackPosition(e.current_position);
         setDuration(e.duration);
+  
         if (e.current_position === e.duration) {
-          setIsPlaying(false);
+          setPlayingAudioId(null); // Stop playing when the audio finishes
         }
         return;
       });
-      setIsPlaying(true);
+  
+      setPlayingAudioId(messageId); // Set the currently playing audio ID
     }
   };
-
   // document
   const pickDocument = async () => {
     try {
@@ -270,28 +282,15 @@ const MessageScreen = () => {
   const renderBubble = (props) => {
     const { currentMessage } = props;
     if (currentMessage.audio) {
+    const isThisAudioPlaying = playingAudioId === currentMessage._id; 
       return (
         <View style={[
           styles.audioContainer,
           currentMessage.user._id === user.uid ? styles.sentAudio : styles.receivedAudio
         ]}>
-          <TouchableOpacity onPress={() => playAudio(currentMessage.audio)}>
-            <Feather name={isPlaying ? 'pause' : 'play'} size={24} color="#075E54" />
+          <TouchableOpacity onPress={() => playAudio(currentMessage.audio, currentMessage._id)}>
+            <Feather name={isThisAudioPlaying ? 'play' : 'pause'} size={24} color="#075E54" />
           </TouchableOpacity>
-          {isPlaying && <Slider
-            style={styles.audioSlider}
-            value={playbackPosition}
-            minimumValue={0}
-            maximumValue={duration}
-            onValueChange={value => setPlaybackPosition(value)}
-            onSlidingComplete={async (value) => {
-              await audioRecorderPlayer.seekToPlayer(value);
-              setPlaybackPosition(value);
-            }}
-          />}
-          <Text style={styles.audioDuration}>
-            {audioRecorderPlayer.mmssss(Math.floor(playbackPosition))} / {audioRecorderPlayer.mmssss(Math.floor(duration))}
-          </Text>
         </View>
       );
     }
