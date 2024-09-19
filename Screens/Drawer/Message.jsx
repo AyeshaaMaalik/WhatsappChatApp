@@ -18,13 +18,12 @@ const MessageScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { contactName, contactEmail, contactProfilePic } = route.params || {};
-
   const [messages, setMessages] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [recordedAudioPath, setRecordedAudioPath] = useState('');
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const user = auth().currentUser;
 
   useEffect(() => {
@@ -73,31 +72,50 @@ const MessageScreen = () => {
     const safeEmail2 = email2.replace(/[.#$[\]]/g, '_');
     return [safeEmail1, safeEmail2].sort().join('_');
   };
-  
+  // audio
 
   const startRecording = async () => {
+    setIsRecording(true);
+    const path = `audio_${new Date().getTime()}.m4a`; // Change this to suit your requirements
+    const uri = `${RNFetchBlob.fs.dirs.CacheDir}/${path}`;
+
     try {
-      await audioRecorderPlayer.startRecorder();
+      await audioRecorderPlayer.startRecorder(uri);
       audioRecorderPlayer.addRecordBackListener((e) => {
-        setRecordingDuration(e.current_position);
+        setPlaybackPosition(e.current_position);
+        setDuration(e.duration);
+        return;
       });
-      setIsRecording(true);
+      setRecordedAudioPath(uri);
     } catch (error) {
+      console.error('Failed to start recording', error);
       Alert.alert('Error', 'Failed to start recording.');
     }
   };
 
   const stopRecording = async () => {
+    setIsRecording(false);
     try {
       const result = await audioRecorderPlayer.stopRecorder();
       audioRecorderPlayer.removeRecordBackListener();
-      setRecordingDuration(0);
-      setIsRecording(false);
+      await uploadAudio(result);
+    } catch (error) {
+      console.error('Failed to stop recording', error);
+      Alert.alert('Error', 'Failed to stop recording.');
+    }
+  };
 
-      const chatId = generateChatId(user.email, contactEmail);
+  const uploadAudio = async (uri) => {
+    const chatId = generateChatId(user.email, contactEmail);
+    const audioRef = storage().ref(`chats/${chatId}/audios/${new Date().getTime()}.m4a`);
+
+    try {
+      await audioRef.putFile(uri);
+      const audioUrl = await audioRef.getDownloadURL();
       const audioMessage = {
         _id: new Date().getTime().toString(),
-        audio: result,
+        audio: audioUrl,
+        duration,
         createdAt: new Date().getTime(),
         user: {
           _id: user.uid,
@@ -108,37 +126,30 @@ const MessageScreen = () => {
       await database().ref(`chats/${chatId}/messages`).push(audioMessage);
       setMessages(previousMessages => GiftedChat.append(previousMessages, [audioMessage]));
     } catch (error) {
-      Alert.alert('Error', 'Failed to stop recording.');
+      console.error('Error uploading audio:', error);
+      Alert.alert('Error', 'Failed to upload audio.');
     }
   };
 
-  const playAudio = async (audioUrl) => {
-    try {
-      if (isPlaying) {
-        await stopAudio();
-      } else {
-        if (!audioUrl) {
-          console.error('No audio URL provided');
-          Alert.alert('Error', 'No audio URL provided.');
-          return;
+  const playAudio = async (url) => {
+    if (isPlaying) {
+      await audioRecorderPlayer.stopPlayer();
+      setIsPlaying(false);
+    } else {
+      await audioRecorderPlayer.startPlayer(url);
+      audioRecorderPlayer.addPlayBackListener((e) => {
+        setPlaybackPosition(e.current_position);
+        setDuration(e.duration);
+        if (e.current_position === e.duration) {
+          setIsPlaying(false);
         }
-        setIsPlaying(true);
-        console.log('Playing audio from:', audioUrl);
-        await audioRecorderPlayer.startPlayer(audioUrl);
-        audioRecorderPlayer.addPlayBackListener((e) => {
-          setPlaybackPosition(e.current_position);
-          setDuration(e.duration);
-          if (e.current_position >= e.duration) {
-            stopAudio();
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error playing audio:', error);
-      Alert.alert('Error', 'Failed to play audio.');
+        return;
+      });
+      setIsPlaying(true);
     }
   };
 
+  // document
   const pickDocument = async () => {
     try {
       const res = await DocumentPicker.pick({
@@ -217,17 +228,6 @@ const MessageScreen = () => {
     }
   };
   
-  const stopAudio = async () => {
-    try {
-      setIsPlaying(false);
-      await audioRecorderPlayer.stopPlayer();
-      audioRecorderPlayer.removePlayBackListener();
-      setPlaybackPosition(0);
-    } catch (error) {
-      console.error('Error stopping audio:', error);
-      Alert.alert('Error', 'Failed to stop audio.');
-    }
-  };
 
   const openCamera = () => {
     launchCamera({ mediaType: 'photo' }, async (response) => {
@@ -269,7 +269,6 @@ const MessageScreen = () => {
 
   const renderBubble = (props) => {
     const { currentMessage } = props;
-
     if (currentMessage.audio) {
       return (
         <View style={[
@@ -296,7 +295,6 @@ const MessageScreen = () => {
         </View>
       );
     }
-
     else if (currentMessage.image) {
       return (
         <View style={[
@@ -360,9 +358,16 @@ const MessageScreen = () => {
         <TouchableOpacity onPress={pickDocument} style={styles.documentButton}>
           <Feather name="file" size={24} color="#075E54" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={isRecording ? stopRecording : startRecording} style={styles.recordButton}>
-          <Feather name={isRecording ? 'stop-circle' : 'mic'} size={24} color="#075E54" />
-        </TouchableOpacity>
+        {isRecording ? (
+          <TouchableOpacity onPress={stopRecording} style={styles.recordButton}>
+            <Feather name="stop-circle" size={24} color="#FF0000" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={startRecording} style={styles.recordButton}>
+            <Feather name="mic" size={24} color="#075E54" />
+          </TouchableOpacity>
+        )}
+
       </View>
     </View>
   );
@@ -391,6 +396,21 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
+  recordButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#DDDDDD',
+  },
+  audioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+    padding: 5,
+    borderRadius: 5,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
