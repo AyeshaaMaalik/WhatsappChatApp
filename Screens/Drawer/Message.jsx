@@ -188,12 +188,11 @@ const MessageScreen = () => {
     }
   };
   
-
   const downloadDocument = async (documentUrl) => {
     try {
       const { config, fs } = RNFetchBlob;
-      const filePath = `${fs.dirs.DownloadDir}/DownloadedDocument.pdf`;
-
+      const filePath = `${fs.dirs.DownloadDir}/${new Date().getTime()}.pdf`; // Dynamic filename
+  
       config({
         fileCache: true,
         addAndroidDownloads: {
@@ -217,7 +216,7 @@ const MessageScreen = () => {
       Alert.alert('Error', 'Failed to download document.');
     }
   };
-
+  
   const stopAudio = async () => {
     try {
       setIsPlaying(false);
