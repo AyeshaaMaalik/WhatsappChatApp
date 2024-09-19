@@ -167,7 +167,7 @@ const MessageScreen = () => {
   
       await documentRef.putFile(filePath, { contentType: type });
       const documentUrl = await documentRef.getDownloadURL();
-      console.log('Document URL:', documentUrl); // Check the URL here
+      console.log('Document URL:', documentUrl);
   
       const documentMessage = {
         _id: new Date().getTime().toString(),
