@@ -10,6 +10,7 @@ import { launchCamera } from 'react-native-image-picker';
 import storage from '@react-native-firebase/storage';
 import DocumentPicker from 'react-native-document-picker';
 import RNFetchBlob from 'rn-fetch-blob';
+import { PermissionsAndroid } from 'react-native';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
@@ -72,6 +73,29 @@ const MessageScreen = () => {
     const safeEmail2 = email2.replace(/[.#$[\]]/g, '_');
     return [safeEmail1, safeEmail2].sort().join('_');
   };
+
+
+  // permission
+
+
+const requestStoragePermission = async () => {
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+      {
+        title: "Storage Permission",
+        message: "App needs access to your storage to upload documents.",
+        buttonNeutral: "Ask Me Later",
+        buttonNegative: "Cancel",
+        buttonPositive: "OK"
+      }
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  } catch (err) {
+    console.warn(err);
+    return false;
+  }
+};
   // audio
 const startRecording = async () => {
   setIsRecording(true);
@@ -177,17 +201,24 @@ const stopRecording = async () => {
       }
     }
   };
+
   const uploadDocument = async (uri, fileName, type) => {
+    const hasPermission = await requestStoragePermission();
+    if (!hasPermission) {
+      Alert.alert('Permission denied', 'Cannot upload document without permission.');
+      return;
+    }
+  
     const chatId = generateChatId(user.email, contactEmail);
     const documentRef = storage().ref(`chats/${chatId}/documents/${fileName}`);
-  
+    
     try {
       const filePath = await RNFetchBlob.fs.stat(uri).then((stats) => stats.path);
-  
+    
       await documentRef.putFile(filePath, { contentType: type });
       const documentUrl = await documentRef.getDownloadURL();
       console.log('Document URL:', documentUrl);
-  
+    
       const documentMessage = {
         _id: new Date().getTime().toString(),
         document: documentUrl,
@@ -198,13 +229,18 @@ const stopRecording = async () => {
           name: user.displayName || 'Anonymous',
         },
       };
-  
+    
       await database().ref(`chats/${chatId}/messages`).push(documentMessage);
       setMessages(previousMessages => GiftedChat.append(previousMessages, [documentMessage]));
     } catch (error) {
       console.error('Error uploading document:', error);
       Alert.alert('Error', 'Failed to upload document.');
     }
+  };
+  
+  const getFilePath = async (uri) => {
+    const filePath = await RNFetchBlob.fs.stat(uri).then((stats) => stats.path);
+    return filePath;
   };
   
   const downloadDocument = async (documentUrl) => {
