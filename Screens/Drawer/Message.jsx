@@ -157,7 +157,7 @@ const stopRecording = async () => {
       setPlayingAudioId(messageId); 
     }
   };
-  // document
+  // documents
   const pickDocument = async () => {
     try {
       const res = await DocumentPicker.pick({

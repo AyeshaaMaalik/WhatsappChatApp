@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import Pdf from 'react-native-pdf';
 
 const PdfViewer = ({ route }) => {
-  const { filePath } = route.params; // Pass filePath from downloadDocument
+  const { filePath } = route.params; 
 
   return (
     <View style={{ flex: 1 }}>
